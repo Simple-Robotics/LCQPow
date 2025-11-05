@@ -20,7 +20,7 @@
 ##
 
 # cmake minimum required version
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.22)
 
 # Project name
 project(lcqpow CXX)
