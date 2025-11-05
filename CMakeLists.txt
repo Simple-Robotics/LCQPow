@@ -448,7 +448,12 @@ endif()
 ## Build Python interface ---------------------------------------------------------------
 if (${BUILD_PYTHON_INTERFACE})
     
-    add_subdirectory(external/pybind11)
+    find_package(Python COMPONENTS Interpreter Development)
+    find_package(pybind11 CONFIG)
+    if (NOT pybind11_FOUND)
+        message(STATUS "Pybind11 not found through find_package(). Using submodule external/pybind11.")
+        add_subdirectory(external/pybind11)
+    endif()
     add_subdirectory(interfaces/python/lcqpow)
 
     set(
