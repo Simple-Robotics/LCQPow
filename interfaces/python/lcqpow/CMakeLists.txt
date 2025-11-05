@@ -3,20 +3,19 @@ find_package(Eigen3 REQUIRED)
 macro(pybind11_add_lcqpow_module MODULE)
   pybind11_add_module(
     ${MODULE} 
-    SHARED 
+    MODULE
     ${MODULE}.cpp
   )
   target_include_directories(
     ${MODULE} 
     PRIVATE
-    ${EIGEN3_INCLUDE_DIR}
-    ${osqp_include}
   )
   target_link_libraries(
     ${MODULE} 
     PRIVATE
-    PUBLIC ${PROJECT_NAME}-shared
-    PRIVATE ${qpoases_lib} ${osqp_lib}
+    ${PROJECT_NAME}-shared
+    Eigen3::Eigen
+    ${qpoases_lib}
   )
 endmacro()
 

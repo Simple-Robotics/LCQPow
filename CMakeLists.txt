@@ -25,22 +25,26 @@ cmake_minimum_required(VERSION 3.22)
 # Project name
 project(lcqpow CXX)
 
-set(CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 
 if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Release)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
-
-# set some default flags
-set(CMAKE_CXX_FLAGS "-Wall -Wextra -pedantic")
-set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 # set install prefix
 set(
     CMAKE_INSTALL_PREFIX
     "${CMAKE_BINARY_DIR}"
 )
+
+# Output directories
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
 ## Options ------------------------------------------------------------------------------
 option(
@@ -93,6 +97,7 @@ message(
 ## ADD ALL EXTERNAL PROJECTS ------------------------------------------------------------
 # external modules
 include(ExternalProject)
+include(FetchContent)
 
 # 1) qpOASES
 set(
@@ -212,34 +217,19 @@ set(qpoases_lib "-L${CMAKE_BINARY_DIR}/lib -lqpOASES")
 set(qpoases_include "${CMAKE_BINARY_DIR}/external/src/qpoases/include")
 
 # 2) OSQP
-ExternalProject_Add(
-    osqp
-    DOWNLOAD_COMMAND cp -a ${CMAKE_SOURCE_DIR}/external/osqp/. ${CMAKE_BINARY_DIR}/external/src/osqp
-    PREFIX external
-    CMAKE_ARGS
-        -DDLONG=OFF
-        -DBUILD_SHARED_LIBS=ON
-    BUILD_COMMAND cmake --build .
-    INSTALL_COMMAND cp ${CMAKE_BINARY_DIR}/external/src/osqp-build/out/libosqp.so ${CMAKE_INSTALL_PREFIX}/lib/libosqp.so
-)
-
-set(osqp_lib "-L${CMAKE_BINARY_DIR}/lib -losqp")
-set(osqp_include "${CMAKE_BINARY_DIR}/external/src/osqp/include")
+FetchContent_Declare(osqp SOURCE_DIR "${CMAKE_SOURCE_DIR}/external/osqp")
+set(DLONG OFF CACHE BOOL "Use long integers" FORCE)
+FetchContent_MakeAvailable(osqp)
 
 # 3) googletest
-ExternalProject_Add(
-    gtest
-    DOWNLOAD_COMMAND cp -a ${CMAKE_SOURCE_DIR}/external/googletest/. ${CMAKE_BINARY_DIR}/external/src/gtest
-    PREFIX external
-    INSTALL_COMMAND cp ${CMAKE_BINARY_DIR}/external/src/gtest-build/lib/libgtest.a ${CMAKE_INSTALL_PREFIX}/lib/
-)
-
-set(gtest_lib "-L${CMAKE_BINARY_DIR}/external/src/gtest-build/out -lgtest")
-set(gtest_include "${CMAKE_BINARY_DIR}/external/src/gtest/googletest/include")
+FetchContent_Declare(gtest SOURCE_DIR "${CMAKE_SOURCE_DIR}/external/googletest")
+FetchContent_MakeAvailable(gtest)
 
 ## CREATE LCQPow libraries ----------------------------------------------------------
 # Include project headers
-include_directories(${PROJECT_NAME} PRIVATE include)
+include_directories(include)
+# Add include directories of dependencies: qpOASES, OSQP
+include_directories(SYSTEM ${qpoases_include})
 
 # Add compile options
 add_compile_options(
@@ -260,8 +250,11 @@ set_target_properties(
     ${PROJECT_NAME}-static
     PROPERTIES
     OUTPUT_NAME ${PROJECT_NAME}
-    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+)
+target_link_libraries(
+    ${PROJECT_NAME}-static
+    PUBLIC
+    osqpstatic
 )
 
 # Add the external projects as depenedncies for our project
@@ -278,21 +271,17 @@ if (${QPOASES_SCHUR})
     )
 endif()
 
-
-# Add include directories of dependencies: qpOASES, OSQP
-include_directories(${PROJECT_NAME}
-    SYSTEM ${qpoases_include}
-    SYSTEM ${osqp_include}
-)
-
 # create shared lib
 add_library(${PROJECT_NAME}-shared SHARED ${SRC_FILES})
 set_target_properties(
     ${PROJECT_NAME}-shared
     PROPERTIES
     OUTPUT_NAME ${PROJECT_NAME}
-    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+)
+target_link_libraries(
+    ${PROJECT_NAME}-shared
+    PUBLIC
+    osqp
 )
 
 # Add the external projects as depenedncies for our project
@@ -338,7 +327,7 @@ if (${BUILD_EXAMPLES})
         target_link_libraries(
             ${EXAMPLE_NAME}
             PUBLIC ${PROJECT_NAME}-shared
-            PRIVATE ${qpoases_lib} ${osqp_lib}
+            PRIVATE ${qpoases_lib} osqp
         )
 
         if (${QPOASES_SCHUR})
@@ -431,7 +420,6 @@ if (${BUILD_MATLAB_INTERFACE})
         target_include_directories(
             matlab_interface
             PRIVATE include
-            SYSTEM ${osqp_include}
             SYSTEM ${qpoases_include}
         )
 
@@ -491,11 +479,7 @@ endif()
 ## Build unit tests ---------------------------------------------------------------------
 if (${UNIT_TESTS})
     # Add include directories of dependencies: qpOASES, OSQP
-    include_directories(${PROJECT_NAME}
-        SYSTEM ${gtest_include}
-        SYSTEM ${qpoases_include}
-        SYSTEM ${osqp_include}
-    )
+    include_directories(SYSTEM ${gtest_include})
 
     # Add Unit testing source file
     add_executable(RunUnitTests test/RunUnitTests.cpp)
@@ -517,7 +501,7 @@ if (${UNIT_TESTS})
     target_link_libraries(
         RunUnitTests
         PUBLIC ${PROJECT_NAME}-shared
-        PRIVATE ${qpoases_lib} ${osqp_lib} ${gtest_lib} ${LIB_SOLVER}
+        PRIVATE ${qpoases_lib} osqp GTest::gtest_main ${LIB_SOLVER}
         PRIVATE -lpthread
     )
 
@@ -535,11 +519,7 @@ if (${UNIT_TESTS})
         add_executable(${EXAMPLE_TEST_NAME} ${ELEMENT})
 
         # link libraries
-        target_link_libraries(
-            ${EXAMPLE_TEST_NAME}
-            PUBLIC ${PROJECT_NAME}-shared
-            PRIVATE ${qpoases_lib} ${osqp_lib}
-        )
+        target_link_libraries(${EXAMPLE_TEST_NAME} PRIVATE ${PROJECT_NAME}-shared ${qpoases_lib})
 
         if (${QPOASES_SCHUR})
             target_link_libraries(
