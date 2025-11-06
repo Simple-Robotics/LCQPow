@@ -77,7 +77,7 @@ option(
     ON
 )
 
-set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 
 # print options
 message(
@@ -157,6 +157,7 @@ FetchContent_Declare(qpoases SOURCE_DIR "${CMAKE_SOURCE_DIR}/external/qpOASES")
 FetchContent_GetProperties(qpoases)
 if (NOT qpoases_POPULATED)
     FetchContent_Populate(qpoases)
+    set(QPOASES_BUILD_EXAMPLES OFF)
     add_subdirectory(${qpoases_SOURCE_DIR} ${qpoases_BINARY_DIR} EXCLUDE_FROM_ALL)
     add_library(qpoases_custom INTERFACE IMPORTED)
     target_link_libraries(qpoases_custom INTERFACE qpOASES)
@@ -168,6 +169,7 @@ if (NOT qpoases_POPULATED)
         -D__USE_LONG_FINTS__
         -D${DEF_SOLVER}
     )
+    set_target_properties(qpOASES PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif()
 
 # 2) OSQP
@@ -196,32 +198,33 @@ endif()
 file(GLOB LCQPOW_SOURCES src/*.cpp)
 
 # create shared lib
-add_library(${PROJECT_NAME}-shared SHARED ${LCQPOW_SOURCES})
+add_library(${PROJECT_NAME}-static STATIC ${LCQPOW_SOURCES})
 set_target_properties(
-    ${PROJECT_NAME}-shared
+    ${PROJECT_NAME}-static
     PROPERTIES
     OUTPUT_NAME ${PROJECT_NAME}
 )
 target_include_directories(
-    ${PROJECT_NAME}-shared
+    ${PROJECT_NAME}-static
     PUBLIC 
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
 )
 target_link_libraries(
-    ${PROJECT_NAME}-shared
+    ${PROJECT_NAME}-static
     PUBLIC
     qpoases_custom
-    osqp
+    osqpstatic
 )
+set_target_properties(lcqpow-static PROPERTIES POSITION_INDEPENDENT_CODE ON)
 if (${PROFILING})
-    target_compile_options(${PROJECT_NAME}-shared PUBLIC -pg)
+    target_compile_options(${PROJECT_NAME}-static PUBLIC -pg)
 endif()
-add_library(lcqpow::lcqpow-shared ALIAS lcqpow-shared)
+add_library(lcqpow::lcqpow-static ALIAS lcqpow-static)
 
 if (${QPOASES_SCHUR})
     target_link_libraries(
-        ${PROJECT_NAME}-shared
+        ${PROJECT_NAME}-static
         PRIVATE ${Matlab_LIBRARIES}
     )
 
@@ -249,11 +252,7 @@ if (${BUILD_EXAMPLES})
 
         add_executable(${EXAMPLE_NAME} ${ELEMENT})
 
-        target_link_libraries(
-            ${EXAMPLE_NAME}
-            PUBLIC ${PROJECT_NAME}-shared
-            PRIVATE qpoases_custom osqp
-        )
+        target_link_libraries(${EXAMPLE_NAME} PRIVATE ${PROJECT_NAME}-static)
 
         if (${QPOASES_SCHUR})
             target_link_libraries(
@@ -320,7 +319,7 @@ if (${BUILD_MATLAB_INTERFACE})
             LINK_TO "-llcqpow -lqpOASES -losqp -lmwblas -lmwlapack -lmwma57"
         )
 
-        target_link_libraries(matlab_interface PUBLIC ${PROJECT_NAME}-shared)
+        target_link_libraries(matlab_interface PUBLIC ${PROJECT_NAME}-static)
 
         target_compile_options(
             matlab_interface
@@ -352,38 +351,7 @@ if (${BUILD_PYTHON_INTERFACE})
         message(STATUS "Pybind11 not found through find_package(). Using submodule external/pybind11.")
         add_subdirectory(external/pybind11)
     endif()
-    add_subdirectory(interfaces/python/lcqpow)
-
-    set(
-        PYTHON_INTERFACE_DIR
-        ${CMAKE_SOURCE_DIR}/interfaces/python
-    )
-
-    set(
-        PYTHON_INTERFACE_NAME
-        lcqpow
-    )
-
-    set(
-        PYTHON_INTERFACE_DESTINATION
-        ${CMAKE_BINARY_DIR}/interfaces/python
-    )
-
-    file(
-        COPY ${PYTHON_INTERFACE_DIR}/${PYTHON_INTERFACE_NAME}/__init__.py
-        DESTINATION ${PYTHON_INTERFACE_DESTINATION}/${PYTHON_INTERFACE_NAME}
-    )
-
-    file(
-        COPY ${PYTHON_INTERFACE_DIR}/examples/
-        DESTINATION ${PYTHON_INTERFACE_DESTINATION}
-    )
-
-    file(
-        COPY ${PROJECT_SOURCE_DIR}/examples/example_data
-        DESTINATION ${PYTHON_INTERFACE_DESTINATION}
-    )
-    
+    add_subdirectory(interfaces/python)
 endif()
 
 ## Build unit tests ---------------------------------------------------------------------
@@ -400,7 +368,7 @@ if (${UNIT_TESTS})
     # Add libraries: gtest, qpOASES, OSQP
     target_link_libraries(
         RunUnitTests
-        PUBLIC lcqpow::lcqpow-shared
+        PUBLIC lcqpow::lcqpow-static
         PRIVATE GTest::gtest_main ${LIB_SOLVER} -lpthread
     )
 
@@ -417,7 +385,7 @@ if (${UNIT_TESTS})
         add_executable(${EXAMPLE_TARGET} ${ELEMENT})
         message(STATUS "Adding unit C++ test ${EXAMPLE_TARGET}")
 
-        target_link_libraries(${EXAMPLE_TARGET} PRIVATE lcqpow::lcqpow-shared)
+        target_link_libraries(${EXAMPLE_TARGET} PRIVATE lcqpow::lcqpow-static)
 
         # specify output directory
         set_target_properties(
@@ -431,7 +399,7 @@ endif()
 ## Installation -------------------------------------------------------------------------
 include(GNUInstallDirs)
 
-install(TARGETS lcqpow-shared
+install(TARGETS lcqpow-static
     EXPORT lcqpowTargets
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
