@@ -11,10 +11,10 @@ void exposeOutputStatistics(py::module_ m);
 void exposeUtilities(py::module_ m);
 
 PYBIND11_MODULE(LCQPow_py, m) {
-    exposeLCQProblem(m);
+    exposeUtilities(m);
     exposeOptions(m);
     exposeOutputStatistics(m);
-    exposeUtilities(m);
+    exposeLCQProblem(m);
 }
 
 } // namespace python
