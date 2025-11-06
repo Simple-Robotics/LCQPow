@@ -17,6 +17,11 @@ macro(pybind11_add_lcqpow_module MODULE)
     Eigen3::Eigen
     ${qpoases_lib}
   )
+  set_target_properties(
+    ${MODULE}
+    PROPERTIES
+      LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+  )
 endmacro()
 
 pybind11_add_lcqpow_module(LCQProblem)
