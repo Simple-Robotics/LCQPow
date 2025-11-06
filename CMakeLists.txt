@@ -35,12 +35,6 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
-# set install prefix
-set(
-    CMAKE_INSTALL_PREFIX
-    "${CMAKE_BINARY_DIR}"
-)
-
 # Output directories
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
@@ -183,7 +177,7 @@ if (${QPOASES_SCHUR})
         )
     else()
         message(
-            "Located the following dependencies for Schur Comeplement Method:\n"
+            "Located the following dependencies for Schur Complement Method:\n"
             "MA57   ${LIB_SOLVER}\n"
             "BLAS   ${LIB_BLAS}\n"
             "LAPACK ${LIB_LAPACK}\n"
