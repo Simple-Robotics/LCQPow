@@ -407,7 +407,7 @@ install(TARGETS lcqpow-static
 )
 
 install(DIRECTORY include/
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/lcqpow
     FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp"
 )
 
