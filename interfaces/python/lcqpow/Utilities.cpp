@@ -8,7 +8,7 @@ namespace python {
 
 namespace py = pybind11;
 
-PYBIND11_MODULE(Utilities, m) {
+void exposeUtilities(py::module_ m) {
   py::enum_<ReturnValue>(m, "ReturnValue", py::arithmetic())
     // Special values
     .value("NOT_YET_IMPLEMENTED",  ReturnValue::NOT_YET_IMPLEMENTED)
