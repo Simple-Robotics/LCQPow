@@ -242,7 +242,7 @@ if (${PROFILING})
 endif()
 
 # Save auxiliar source files to variable
-aux_source_directory(src SRC_FILES)
+file(GLOB SRC_FILES src/*.cpp)
 
 # create static lib
 add_library(${PROJECT_NAME}-static STATIC ${SRC_FILES})
@@ -314,9 +314,9 @@ endif()
 
 ## Build examples -----------------------------------------------------------------------
 if (${BUILD_EXAMPLES})
-    aux_source_directory(examples EXAMPLE_FILES)
+    file(GLOB EXAMPLE_FILES examples/*.cpp)
 
-    FOREACH(ELEMENT ${EXAMPLE_FILES})
+    foreach(ELEMENT ${EXAMPLE_FILES})
         # get filename w/o dir and extension
         get_filename_component(EXAMPLE_NAME ${ELEMENT} NAME_WE)
 
@@ -506,9 +506,9 @@ if (${UNIT_TESTS})
     )
 
     # Build examples for testing
-    aux_source_directory(test/examples TEST_FILES)
+    file(GLOB TEST_FILES test/examples/*.cpp)
 
-    FOREACH(ELEMENT ${TEST_FILES})
+    foreach(ELEMENT ${TEST_FILES})
         # get filename w/o dir and extension
         get_filename_component(EXAMPLE_NAME ${ELEMENT} NAME_WE)
 
@@ -517,6 +517,7 @@ if (${UNIT_TESTS})
 
         # generate executable target
         add_executable(${EXAMPLE_TEST_NAME} ${ELEMENT})
+        message(STATUS "Adding unit C++ test ${EXAMPLE_TEST_NAME}")
 
         # link libraries
         target_link_libraries(${EXAMPLE_TEST_NAME} PRIVATE ${PROJECT_NAME}-shared ${qpoases_lib})
