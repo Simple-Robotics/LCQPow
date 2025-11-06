@@ -49,11 +49,11 @@ PYBIND11_MODULE(Utilities, m) {
     .value("OSQP_WORKSPACE_NOT_SET_UP",  ReturnValue::OSQP_WORKSPACE_NOT_SET_UP)
     // Generic errors
     .value("LCQPOBJECT_NOT_SETUP",  ReturnValue::LCQPOBJECT_NOT_SETUP)
-    .value("INDEX_OUT_OF_BOUNDS ",  ReturnValue::INDEX_OUT_OF_BOUNDS)
-    .value("UNABLE_TO_READ_FILE ",  ReturnValue::UNABLE_TO_READ_FILE)
+    .value("INDEX_OUT_OF_BOUNDS",  ReturnValue::INDEX_OUT_OF_BOUNDS)
+    .value("UNABLE_TO_READ_FILE",  ReturnValue::UNABLE_TO_READ_FILE)
     // Sparse matrices
-    .value("INVALID_INDEX_POINTER ",  ReturnValue::INVALID_INDEX_POINTER)
-    .value("INVALID_INDEX_ARRAY ",  ReturnValue::INVALID_INDEX_ARRAY)
+    .value("INVALID_INDEX_POINTER",  ReturnValue::INVALID_INDEX_POINTER)
+    .value("INVALID_INDEX_ARRAY",  ReturnValue::INVALID_INDEX_ARRAY)
     .export_values();
 
   py::enum_<AlgorithmStatus>(m, "AlgorithmStatus", py::arithmetic())
