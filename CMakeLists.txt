@@ -173,9 +173,12 @@ FetchContent_MakeAvailable(osqp)
 
 # 3) googletest
 if(${UNIT_TESTS})
-    FetchContent_Declare(gtest SOURCE_DIR "${CMAKE_SOURCE_DIR}/external/googletest")
-    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-    FetchContent_MakeAvailable(gtest)
+    find_package(GTest)
+    if (NOT GTest_FOUND)
+        FetchContent_Declare(gtest SOURCE_DIR "${CMAKE_SOURCE_DIR}/external/googletest")
+        set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+        FetchContent_MakeAvailable(gtest)
+    endif()
 endif()
 
 ## CREATE LCQPow libraries ----------------------------------------------------------
