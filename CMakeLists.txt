@@ -151,9 +151,13 @@ if (${QPOASES_SCHUR})
     endif()
 endif()
 
+cmake_policy(SET CMP0169 OLD)
+
 FetchContent_Declare(qpoases SOURCE_DIR "${CMAKE_SOURCE_DIR}/external/qpOASES")
-FetchContent_MakeAvailable(qpoases)
-if (NOT TARGET qpoases_custom)
+FetchContent_GetProperties(qpoases)
+if (NOT qpoases_POPULATED)
+    FetchContent_Populate(qpoases)
+    add_subdirectory(${qpoases_SOURCE_DIR} ${qpoases_BINARY_DIR} EXCLUDE_FROM_ALL)
     add_library(qpoases_custom INTERFACE IMPORTED)
     target_link_libraries(qpoases_custom INTERFACE qpOASES)
     target_include_directories(qpoases_custom INTERFACE ${qpoases_SOURCE_DIR}/include)
@@ -169,7 +173,11 @@ endif()
 # 2) OSQP
 FetchContent_Declare(osqp SOURCE_DIR "${CMAKE_SOURCE_DIR}/external/osqp")
 set(DLONG OFF CACHE BOOL "Use long integers" FORCE)
-FetchContent_MakeAvailable(osqp)
+FetchContent_GetProperties(osqp)
+if (NOT osqp_POPULATED)
+    FetchContent_Populate(osqp)
+    add_subdirectory(${osqp_SOURCE_DIR} ${osqp_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
 
 # 3) googletest
 if(${UNIT_TESTS})
@@ -199,7 +207,6 @@ target_include_directories(
     PUBLIC 
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
-    ${qpoases_SOURCE_DIR}/include
 )
 target_link_libraries(
     ${PROJECT_NAME}-shared
@@ -420,3 +427,37 @@ if (${UNIT_TESTS})
         )
     endforeach()
 endif()
+
+## Installation -------------------------------------------------------------------------
+include(GNUInstallDirs)
+
+install(TARGETS lcqpow-shared
+    EXPORT lcqpowTargets
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+install(DIRECTORY include/
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp"
+)
+
+install(EXPORT lcqpowTargets
+    FILE lcqpowTargets.cmake
+    NAMESPACE lcqpow::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/lcqpow
+)
+
+# uninstall target
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
+    IMMEDIATE @ONLY)
+
+if(NOT TARGET uninstall)
+    add_custom_command(uninstall)
+endif()
+add_custom_target(${PROJECT_NAME}-uninstall
+    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
+add_dependencies(uninstall ${PROJECT_NAME}-uninstall)
