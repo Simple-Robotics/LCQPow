@@ -293,8 +293,6 @@ if(${BUILD_MATLAB_INTERFACE})
             SRC
                 ${MATLAB_INTERFACE_DIR}/${MATLAB_INTERFACE_NAME}.cpp
             OUTPUT_NAME ${MATLAB_INTERFACE_DESTINATION}/${MATLAB_INTERFACE_NAME}
-            LINK_TO
-                "-llcqpow -lqpOASES -losqp -lmwblas -lmwlapack -lmwma57"
         )
 
         target_link_libraries(matlab_interface PUBLIC ${PROJECT_NAME}-static)
@@ -303,12 +301,7 @@ if(${BUILD_MATLAB_INTERFACE})
             matlab_interface
             PUBLIC
                 -D${DEF_SOLVER}
-                -D__cpluplus
-                -O
-                -largeArrayDims
-                -lmwblas
-                -lmwlapack
-                -lmwma57
+                -D__cplusplus
         )
 
         file(COPY ${MATLAB_INTERFACE_DIR}/${MATLAB_INTERFACE_NAME}.m DESTINATION ${MATLAB_INTERFACE_DESTINATION})
@@ -412,11 +405,12 @@ configure_file(
 )
 
 if(NOT TARGET uninstall)
-    add_custom_command(uninstall)
+    add_custom_target(uninstall)
 endif()
 add_custom_target(
     ${PROJECT_NAME}-uninstall
     COMMAND
         ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake
+    COMMENT "Uninstalling ${PROJECT_NAME}"
 )
 add_dependencies(uninstall ${PROJECT_NAME}-uninstall)
