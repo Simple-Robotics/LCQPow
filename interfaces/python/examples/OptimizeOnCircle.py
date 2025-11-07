@@ -17,7 +17,7 @@ x_ref= np.array([0.5, -0.6])
 lcqp = lcqpow.LCQProblem(nV=nV, nC=nC, nComp=nComp)
 options = lcqpow.Options()
 options.setPrintLevel(lcqpow.PrintLevel.INNER_LOOP_ITERATES)
-options.setQPSolver(lcqpow.QPSolver.OSQP_SPARSE)
+options.setQPSolver(lcqpow.QPSolver.QPOASES_DENSE)
 options.setStationarityTolerance(10e-3)
 lcqp.setOptions(options)
 
