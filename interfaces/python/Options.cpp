@@ -8,7 +8,7 @@ namespace python {
 
 namespace py = pybind11;
 
-PYBIND11_MODULE(Options, m) {
+void exposeOptions(py::module_ m) {
   py::class_<Options>(m, "Options")
     .def(py::init<>())
     .def(py::init<const Options&>(), py::arg("rhs"))

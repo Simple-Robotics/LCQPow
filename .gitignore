@@ -20,7 +20,7 @@
 ##
 
 ### Directories ###
-build
+build*/
 src/qpOASES
 .vscode
 .venv

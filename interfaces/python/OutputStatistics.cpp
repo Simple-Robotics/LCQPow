@@ -1,8 +1,6 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-#include <vector>
-
 #include "OutputStatistics.hpp"
 
 
@@ -11,7 +9,7 @@ namespace python {
 
 namespace py = pybind11;
 
-PYBIND11_MODULE(OutputStatistics, m) {
+void exposeOutputStatistics(py::module_ m) {
   py::class_<OutputStatistics>(m, "OutputStatistics")
     .def(py::init<>())
     .def("getIterTotal", &OutputStatistics::getIterTotal)

@@ -20,64 +20,40 @@
 ##
 
 # cmake minimum required version
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.22)
 
 # Project name
 project(lcqpow CXX)
 
-set(CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 
 if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Release)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
-# set some default flags
-set(CMAKE_CXX_FLAGS "-Wall -Wextra -pedantic")
-set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3")
-
-# set install prefix
-set(
-    CMAKE_INSTALL_PREFIX
-    "${CMAKE_BINARY_DIR}"
-)
+# Output directories
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
 ## Options ------------------------------------------------------------------------------
-option(
-    BUILD_EXAMPLES
-    "Option to build examples"
-    ON
-)
+option(BUILD_EXAMPLES "Option to build examples" ON)
 
-option(
-    UNIT_TESTS
-    "Option to build and run unit tests"
-    ON
-)
+option(UNIT_TESTS "Option to build and run unit tests" ON)
 
-option(
-    PROFILING
-    "Option to enable profiling (gprof)."
-    OFF
-)
+option(PROFILING "Option to enable profiling (gprof)." OFF)
 
-option(
-    QPOASES_SCHUR
-    "Use the Schur Complement Method with MA57 Solver"
-    OFF
-)
+option(QPOASES_SCHUR "Use the Schur Complement Method with MA57 Solver" OFF)
 
-option(
-    BUILD_MATLAB_INTERFACE
-    "Option to build Matlab interface"
-    ON
-)
+option(BUILD_MATLAB_INTERFACE "Option to build Matlab interface" ON)
 
-option(
-    BUILD_PYTHON_INTERFACE
-    "Option to build Python interface"
-    ON
-)
+option(BUILD_PYTHON_INTERFACE "Option to build Python interface" ON)
+
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 
 # print options
 message(
@@ -92,79 +68,41 @@ message(
 
 ## ADD ALL EXTERNAL PROJECTS ------------------------------------------------------------
 # external modules
-include(ExternalProject)
+include(FetchContent)
 
 # 1) qpOASES
-set(
-    DEF_SOLVER
-    "SOLVER_NONE"
-)
+set(DEF_SOLVER "SOLVER_NONE")
 
-if (${QPOASES_SCHUR})
-
+if(${QPOASES_SCHUR})
     find_package(Matlab)
-    if (NOT ${Matlab_FOUND})
+    if(NOT ${Matlab_FOUND})
         # throw error if schur is enabled and matlab not found
         message(
             FATAL_ERROR
             "qpOASES with Schur Complement method is currently only supported in combination with matlab, which can not be located."
         )
     endif()
-    
-    message(
-        "qpOASES Matlab found"
-    )
+
+    message(STATUS "qpOASES Matlab found")
 
     # if found, then set some variables
-    get_filename_component(
-        MATLAB_LIBDIR
-        ${Matlab_MEX_LIBRARY}
-        DIRECTORY
-    )
+    get_filename_component(MATLAB_LIBDIR ${Matlab_MEX_LIBRARY} DIRECTORY)
 
-    set(
-        LIB_SOLVER
-        "${MATLAB_LIBDIR}/libmwma57.so"
-    )
+    set(LIB_SOLVER "${MATLAB_LIBDIR}/libmwma57.so")
+    set(DEF_SOLVER "SOLVER_MA57")
+    set(USE_SOLVER "MA57")
+    set(LINKHSL "-Wl,-rpath=${MATLAB_LIBDIR}")
+    set(LIB_LAPACK "${MATLAB_LIBDIR}/libmwlapack.so")
+    set(LIB_BLAS "${MATLAB_LIBDIR}/libmwblas.so")
+    set(LIB_METIS "${MATLAB_LIBDIR}/libmwmetis.so")
+    set(sparse_libs "${LIB_SOLVER} ${LIB_BLAS} ${LIB_LAPACK} ${LIB_METIS}")
 
-    set(
-        DEF_SOLVER
-        "SOLVER_MA57"
-    )
-
-    set(
-        USE_SOLVER
-        "MA57"
-    )
-
-    set(
-        LINKHSL
-        "-Wl,-rpath=${MATLAB_LIBDIR}"
-    )
-
-    set(
-        LIB_LAPACK
-        "${MATLAB_LIBDIR}/libmwlapack.so"
-    )
-
-    set(
-        LIB_BLAS
-        "${MATLAB_LIBDIR}/libmwblas.so"
-    )
-
-    set(
-        LIB_METIS
-        "${MATLAB_LIBDIR}/libmwmetis.so"
-    )
-
-    set(
-        sparse_libs
-        "${LIB_SOLVER} ${LIB_BLAS} ${LIB_LAPACK} ${LIB_METIS}"
-    )
-
-    set(
-        qpOASES_MAKE_ARGS
-        ${qpOASES_MAKE_ARGS} LIB_SOLVER=${LIB_SOLVER} LIB_BLAS=${LIB_BLAS} LIB_LAPACK=${LIB_LAPACK} LINKHSL=${LINKHSL}
+    set(qpOASES_MAKE_ARGS
+        ${qpOASES_MAKE_ARGS}
+        LIB_SOLVER=${LIB_SOLVER}
+        LIB_BLAS=${LIB_BLAS}
+        LIB_LAPACK=${LIB_LAPACK}
+        LINKHSL=${LINKHSL}
     )
 
     if(NOT EXISTS ${LIB_SOLVER} OR NOT EXISTS ${LIB_BLAS} OR NOT EXISTS ${LIB_LAPACK} OR NOT EXISTS ${LIB_METIS})
@@ -178,376 +116,301 @@ if (${QPOASES_SCHUR})
         )
     else()
         message(
-            "Located the following dependencies for Schur Comeplement Method:\n"
+            "Located the following dependencies for Schur Complement Method:\n"
             "MA57   ${LIB_SOLVER}\n"
             "BLAS   ${LIB_BLAS}\n"
             "LAPACK ${LIB_LAPACK}\n"
             "METIS  ${LIB_METIS}"
-        ) 
+        )
     endif()
 endif()
 
-set(
-    qpOASES_CPP_FLAGS
-    "-w -O3 -fPIC -DLINUX -D${DEF_SOLVER} -D__USE_LONG_FINTS__ -D__NO_COPYRIGHT__"
-)
+cmake_policy(SET CMP0169 OLD)
 
-set(
-    qpOASES_MAKE_ARGS
-    ${qpOASES_MAKE_ARGS} CPPFLAGS=${qpOASES_CPP_FLAGS}
-)
-
-ExternalProject_Add(
+FetchContent_Declare(
     qpoases
-    DOWNLOAD_COMMAND cp -a ${CMAKE_SOURCE_DIR}/external/qpOASES/. ${CMAKE_BINARY_DIR}/external/src/qpoases
-    PREFIX external
-    CONFIGURE_COMMAND mkdir -p bin;
-    BUILD_IN_SOURCE ON
-    BUILD_COMMAND make ${qpOASES_MAKE_ARGS} src;
-    INSTALL_DIR ${CMAKE_INSTALL_PREFIX}
-    INSTALL_COMMAND cp ${CMAKE_BINARY_DIR}/external/src/qpoases/bin/libqpOASES.so ${CMAKE_INSTALL_PREFIX}/lib/libqpOASES.so
+    SOURCE_DIR
+    "${CMAKE_SOURCE_DIR}/external/qpOASES"
 )
-
-set(qpoases_lib "-L${CMAKE_BINARY_DIR}/lib -lqpOASES")
-set(qpoases_include "${CMAKE_BINARY_DIR}/external/src/qpoases/include")
+FetchContent_GetProperties(qpoases)
+if(NOT qpoases_POPULATED)
+    FetchContent_Populate(qpoases)
+    set(QPOASES_BUILD_EXAMPLES OFF)
+    add_subdirectory(${qpoases_SOURCE_DIR} ${qpoases_BINARY_DIR} EXCLUDE_FROM_ALL)
+    add_library(qpoases_custom INTERFACE IMPORTED)
+    target_link_libraries(qpoases_custom INTERFACE qpOASES)
+    target_include_directories(qpoases_custom INTERFACE ${qpoases_SOURCE_DIR}/include)
+    # compile options
+    target_compile_options(
+        qpoases_custom
+        INTERFACE
+            -D__USE_LONG_FINTS__
+            -D${DEF_SOLVER}
+    )
+    set_target_properties(
+        qpOASES
+        PROPERTIES
+            POSITION_INDEPENDENT_CODE
+                ON
+    )
+endif()
 
 # 2) OSQP
-ExternalProject_Add(
+FetchContent_Declare(
     osqp
-    DOWNLOAD_COMMAND cp -a ${CMAKE_SOURCE_DIR}/external/osqp/. ${CMAKE_BINARY_DIR}/external/src/osqp
-    PREFIX external
-    CMAKE_ARGS
-        -DDLONG=OFF
-        -DBUILD_SHARED_LIBS=ON
-    BUILD_COMMAND cmake --build .
-    INSTALL_COMMAND cp ${CMAKE_BINARY_DIR}/external/src/osqp-build/out/libosqp.so ${CMAKE_INSTALL_PREFIX}/lib/libosqp.so
+    SOURCE_DIR
+    "${CMAKE_SOURCE_DIR}/external/osqp"
 )
-
-set(osqp_lib "-L${CMAKE_BINARY_DIR}/lib -losqp")
-set(osqp_include "${CMAKE_BINARY_DIR}/external/src/osqp/include")
+set(DLONG OFF CACHE BOOL "Use long integers" FORCE)
+FetchContent_GetProperties(osqp)
+if(NOT osqp_POPULATED)
+    FetchContent_Populate(osqp)
+    add_subdirectory(${osqp_SOURCE_DIR} ${osqp_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
 
 # 3) googletest
-ExternalProject_Add(
-    gtest
-    DOWNLOAD_COMMAND cp -a ${CMAKE_SOURCE_DIR}/external/googletest/. ${CMAKE_BINARY_DIR}/external/src/gtest
-    PREFIX external
-    INSTALL_COMMAND cp ${CMAKE_BINARY_DIR}/external/src/gtest-build/lib/libgtest.a ${CMAKE_INSTALL_PREFIX}/lib/
-)
-
-set(gtest_lib "-L${CMAKE_BINARY_DIR}/external/src/gtest-build/out -lgtest")
-set(gtest_include "${CMAKE_BINARY_DIR}/external/src/gtest/googletest/include")
+if(${UNIT_TESTS})
+    find_package(GTest)
+    if(NOT GTest_FOUND)
+        FetchContent_Declare(
+            gtest
+            SOURCE_DIR
+            "${CMAKE_SOURCE_DIR}/external/googletest"
+        )
+        set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+        FetchContent_MakeAvailable(gtest)
+    endif()
+endif()
 
 ## CREATE LCQPow libraries ----------------------------------------------------------
 # Include project headers
-include_directories(${PROJECT_NAME} PRIVATE include)
-
-# Add compile options
-add_compile_options(
-    -D__USE_LONG_FINTS__
-    -D${DEF_SOLVER}
-)
-
-if (${PROFILING})
-    add_compile_options(-pg)
-endif()
 
 # Save auxiliar source files to variable
-aux_source_directory(src SRC_FILES)
-
-# create static lib
-add_library(${PROJECT_NAME}-static STATIC ${SRC_FILES})
-set_target_properties(
-    ${PROJECT_NAME}-static
-    PROPERTIES
-    OUTPUT_NAME ${PROJECT_NAME}
-    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
-)
-
-# Add the external projects as depenedncies for our project
-add_dependencies(
-    ${PROJECT_NAME}-static
-    qpoases
-    osqp
-)
-
-if (${QPOASES_SCHUR})
-    target_link_libraries(
-        ${PROJECT_NAME}-static
-        PRIVATE ${Matlab_LIBRARIES}
-    )
-endif()
-
-
-# Add include directories of dependencies: qpOASES, OSQP
-include_directories(${PROJECT_NAME}
-    SYSTEM ${qpoases_include}
-    SYSTEM ${osqp_include}
-)
+file(GLOB LCQPOW_SOURCES src/*.cpp)
 
 # create shared lib
-add_library(${PROJECT_NAME}-shared SHARED ${SRC_FILES})
+add_library(${PROJECT_NAME}-static STATIC ${LCQPOW_SOURCES})
 set_target_properties(
-    ${PROJECT_NAME}-shared
+    ${PROJECT_NAME}-static
     PROPERTIES
-    OUTPUT_NAME ${PROJECT_NAME}
-    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+        OUTPUT_NAME
+            ${PROJECT_NAME}
 )
-
-# Add the external projects as depenedncies for our project
-add_dependencies(
-    ${PROJECT_NAME}-shared
-    qpoases
-    osqp
+target_include_directories(
+    ${PROJECT_NAME}-static
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
 )
+target_link_libraries(
+    ${PROJECT_NAME}-static
+    PUBLIC
+        qpoases_custom
+        osqpstatic
+)
+set_target_properties(
+    lcqpow-static
+    PROPERTIES
+        POSITION_INDEPENDENT_CODE
+            ON
+)
+if(${PROFILING})
+    target_compile_options(${PROJECT_NAME}-static PUBLIC -pg)
+endif()
+add_library(lcqpow::lcqpow-static ALIAS lcqpow-static)
 
-if (${QPOASES_SCHUR})
-    target_link_libraries(
-        ${PROJECT_NAME}-shared
-        PRIVATE ${Matlab_LIBRARIES}
-    )
+if(${QPOASES_SCHUR})
+    target_link_libraries(${PROJECT_NAME}-static PRIVATE ${Matlab_LIBRARIES})
 
     get_filename_component(LIB_SOLVER_NAME ${LIB_SOLVER} NAME)
     get_filename_component(LIB_BLAS_NAME ${LIB_BLAS} NAME)
     get_filename_component(LIB_LAPACK_NAME ${LIB_LAPACK} NAME)
     get_filename_component(LIB_METIS_NAME ${LIB_METIS} NAME)
 
-
-    ADD_CUSTOM_TARGET(link_schur ALL 
-        COMMAND ${CMAKE_COMMAND} -E create_symlink ${LIB_SOLVER} lib/${LIB_SOLVER_NAME}
-        COMMAND ${CMAKE_COMMAND} -E create_symlink ${LIB_BLAS} lib/${LIB_BLAS_NAME}
-        COMMAND ${CMAKE_COMMAND} -E create_symlink ${LIB_LAPACK} lib/${LIB_LAPACK_NAME}
-        COMMAND ${CMAKE_COMMAND} -E create_symlink ${LIB_METIS} lib/${LIB_METIS_NAME}
+    add_custom_target(
+        link_schur
+        ALL
+        COMMAND
+            ${CMAKE_COMMAND} -E create_symlink ${LIB_SOLVER} lib/${LIB_SOLVER_NAME}
+        COMMAND
+            ${CMAKE_COMMAND} -E create_symlink ${LIB_BLAS} lib/${LIB_BLAS_NAME}
+        COMMAND
+            ${CMAKE_COMMAND} -E create_symlink ${LIB_LAPACK} lib/${LIB_LAPACK_NAME}
+        COMMAND
+            ${CMAKE_COMMAND} -E create_symlink ${LIB_METIS} lib/${LIB_METIS_NAME}
     )
-
 endif()
 
 ## Build examples -----------------------------------------------------------------------
-if (${BUILD_EXAMPLES})
-    aux_source_directory(examples EXAMPLE_FILES)
+if(${BUILD_EXAMPLES})
+    file(GLOB EXAMPLE_FILES examples/*.cpp)
 
-    FOREACH(ELEMENT ${EXAMPLE_FILES})
-        # get filename w/o dir and extension
+    foreach(ELEMENT ${EXAMPLE_FILES})
         get_filename_component(EXAMPLE_NAME ${ELEMENT} NAME_WE)
 
-        # generate executable target
         add_executable(${EXAMPLE_NAME} ${ELEMENT})
 
-        # link libraries
-        target_link_libraries(
-            ${EXAMPLE_NAME}
-            PUBLIC ${PROJECT_NAME}-shared
-            PRIVATE ${qpoases_lib} ${osqp_lib}
-        )
+        target_link_libraries(${EXAMPLE_NAME} PRIVATE ${PROJECT_NAME}-static)
 
-        if (${QPOASES_SCHUR})
-            target_link_libraries(
-                ${EXAMPLE_NAME}
-                PRIVATE ${Matlab_LIBRARIES}
-            )
+        if(${QPOASES_SCHUR})
+            target_link_libraries(${EXAMPLE_NAME} PRIVATE ${Matlab_LIBRARIES})
         endif()
 
         # specify output directory
         set_target_properties(
             ${EXAMPLE_NAME}
             PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/examples"
+                RUNTIME_OUTPUT_DIRECTORY
+                    "${CMAKE_BINARY_DIR}/bin/examples"
         )
     endforeach()
 endif()
 
 ## Build Matlab interface ---------------------------------------------------------------
-if (${BUILD_MATLAB_INTERFACE})
-
+if(${BUILD_MATLAB_INTERFACE})
     # Ensure cmake can locate matlab and set matlab paths
     find_package(Matlab)
-    if (NOT ${Matlab_FOUND})
+    if(NOT ${Matlab_FOUND})
         # send warning that the matlab interface could not be built
-        message(
-            WARNING
-            "Unable to build Matlab interface (Matlab was not found)."
-        )
-    
-    # if found, then build interface
-    else()
-        get_filename_component(
-            MATLAB_LIBDIR
-            ${Matlab_MEX_LIBRARY}
-            DIRECTORY
-        )
+        message(WARNING "Unable to build Matlab interface (Matlab was not found).")
 
-        if (${QPOASES_SCHUR})
-            set(
-                MA57_lib
-                -lmwma57
-            )
+        # if found, then build interface
+    else()
+        get_filename_component(MATLAB_LIBDIR ${Matlab_MEX_LIBRARY} DIRECTORY)
+
+        if(${QPOASES_SCHUR})
+            set(MA57_lib -lmwma57)
         endif()
 
-        set(
-            MATLAB_INTERFACE_DIR
-            ${CMAKE_SOURCE_DIR}/interfaces/matlab
-        )
+        set(MATLAB_INTERFACE_DIR ${CMAKE_SOURCE_DIR}/interfaces/matlab)
 
-        set(
-            MATLAB_INTERFACE_NAME
-            LCQPow
-        )
+        set(MATLAB_INTERFACE_NAME LCQPow)
 
-        set(
-            MATLAB_INTERFACE_DESTINATION
-            ${CMAKE_BINARY_DIR}/lib
-        )
+        set(MATLAB_INTERFACE_DESTINATION ${CMAKE_BINARY_DIR}/lib)
 
         matlab_add_mex(
             NAME matlab_interface
-            SRC ${MATLAB_INTERFACE_DIR}/${MATLAB_INTERFACE_NAME}.cpp
+            SRC
+                ${MATLAB_INTERFACE_DIR}/${MATLAB_INTERFACE_NAME}.cpp
             OUTPUT_NAME ${MATLAB_INTERFACE_DESTINATION}/${MATLAB_INTERFACE_NAME}
-            LINK_TO "-llcqpow -lqpOASES -losqp -lmwblas -lmwlapack -lmwma57"
         )
 
-        target_link_directories(
-            matlab_interface
-            PUBLIC ${CMAKE_BINARY_DIR}/lib
-        )
+        target_link_libraries(matlab_interface PUBLIC ${PROJECT_NAME}-static)
 
         target_compile_options(
             matlab_interface
-            PUBLIC -D${DEF_SOLVER}
-            PUBLIC -D__USE_LONG_FINTS__
-            PUBLIC -D__MATLAB__
-            PUBLIC -D__NO_COPYRIGHT__
-            PUBLIC -D__cpluplus
-            PUBLIC -O
-            PUBLIC -largeArrayDims
-            PUBLIC -lmwblas
-            PUBLIC -lmwlapack
-            PUBLIC -lmwma57
-            PUBLIC -llcqpow
-            PUBLIC -lqpOASES
-            PUBLIC -losqp
+            PUBLIC
+                -D${DEF_SOLVER}
+                -D__cplusplus
         )
 
-        target_include_directories(
-            matlab_interface
-            PRIVATE include
-            SYSTEM ${osqp_include}
-            SYSTEM ${qpoases_include}
-        )
-
-        file(
-            COPY ${MATLAB_INTERFACE_DIR}/${MATLAB_INTERFACE_NAME}.m
-            DESTINATION ${MATLAB_INTERFACE_DESTINATION}
-        )
-    
+        file(COPY ${MATLAB_INTERFACE_DIR}/${MATLAB_INTERFACE_NAME}.m DESTINATION ${MATLAB_INTERFACE_DESTINATION})
     endif()
-
 endif()
 
-
 ## Build Python interface ---------------------------------------------------------------
-if (${BUILD_PYTHON_INTERFACE})
-    
-    add_subdirectory(external/pybind11)
-    add_subdirectory(interfaces/python/lcqpow)
-
-    set(
-        PYTHON_INTERFACE_DIR
-        ${CMAKE_SOURCE_DIR}/interfaces/python
+if(${BUILD_PYTHON_INTERFACE})
+    find_package(
+        Python
+        COMPONENTS
+            Interpreter
+            Development
     )
-
-    set(
-        PYTHON_INTERFACE_NAME
-        lcqpow
-    )
-
-    set(
-        PYTHON_INTERFACE_DESTINATION
-        ${CMAKE_BINARY_DIR}/interfaces/python
-    )
-
-    file(
-        COPY ${PYTHON_INTERFACE_DIR}/${PYTHON_INTERFACE_NAME}/__init__.py
-        DESTINATION ${PYTHON_INTERFACE_DESTINATION}/${PYTHON_INTERFACE_NAME}
-    )
-
-    file(
-        COPY ${PYTHON_INTERFACE_DIR}/examples/
-        DESTINATION ${PYTHON_INTERFACE_DESTINATION}
-    )
-
-    file(
-        COPY ${PROJECT_SOURCE_DIR}/examples/example_data
-        DESTINATION ${PYTHON_INTERFACE_DESTINATION}
-    )
-    
+    find_package(pybind11 CONFIG)
+    if(NOT pybind11_FOUND)
+        message(STATUS "Pybind11 not found through find_package(). Using submodule external/pybind11.")
+        add_subdirectory(external/pybind11)
+    endif()
+    add_subdirectory(interfaces/python)
 endif()
 
 ## Build unit tests ---------------------------------------------------------------------
-if (${UNIT_TESTS})
-    # Add include directories of dependencies: qpOASES, OSQP
-    include_directories(${PROJECT_NAME}
-        SYSTEM ${gtest_include}
-        SYSTEM ${qpoases_include}
-        SYSTEM ${osqp_include}
-    )
-
-    # Add Unit testing source file
+if(${UNIT_TESTS})
+    enable_testing()
     add_executable(RunUnitTests test/RunUnitTests.cpp)
-
-    add_dependencies(
-        RunUnitTests
-        qpoases
-        osqp
-        gtest
-    )
 
     set_target_properties(
         RunUnitTests
         PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/tests"
+            RUNTIME_OUTPUT_DIRECTORY
+                "${CMAKE_BINARY_DIR}/bin/tests"
     )
 
     # Add libraries: gtest, qpOASES, OSQP
     target_link_libraries(
         RunUnitTests
-        PUBLIC ${PROJECT_NAME}-shared
-        PRIVATE ${qpoases_lib} ${osqp_lib} ${gtest_lib} ${LIB_SOLVER}
-        PRIVATE -lpthread
+        PUBLIC
+            lcqpow::lcqpow-static
+        PRIVATE
+            GTest::gtest_main
+            ${LIB_SOLVER}
+            -lpthread
     )
 
-    # Build examples for testing
-    aux_source_directory(test/examples TEST_FILES)
+    add_test(NAME UnitTests COMMAND RunUnitTests)
 
-    FOREACH(ELEMENT ${TEST_FILES})
-        # get filename w/o dir and extension
+    # Build examples for testing
+    file(GLOB TEST_FILES test/examples/*.cpp)
+
+    foreach(ELEMENT ${TEST_FILES})
         get_filename_component(EXAMPLE_NAME ${ELEMENT} NAME_WE)
 
-        # save to example test name
-        set(EXAMPLE_TEST_NAME "${EXAMPLE_NAME}_TEST")
+        set(EXAMPLE_TARGET "${EXAMPLE_NAME}_TEST")
 
-        # generate executable target
-        add_executable(${EXAMPLE_TEST_NAME} ${ELEMENT})
+        add_executable(${EXAMPLE_TARGET} ${ELEMENT})
+        message(STATUS "Adding unit C++ test ${EXAMPLE_TARGET}")
 
-        # link libraries
-        target_link_libraries(
-            ${EXAMPLE_TEST_NAME}
-            PUBLIC ${PROJECT_NAME}-shared
-            PRIVATE ${qpoases_lib} ${osqp_lib}
-        )
-
-        if (${QPOASES_SCHUR})
-            target_link_libraries(
-                ${EXAMPLE_TEST_NAME}
-                PRIVATE ${Matlab_LIBRARIES}
-            )
-        endif()
+        target_link_libraries(${EXAMPLE_TARGET} PRIVATE lcqpow::lcqpow-static)
 
         # specify output directory
         set_target_properties(
-            ${EXAMPLE_TEST_NAME}
+            ${EXAMPLE_TARGET}
             PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/tests"
+                RUNTIME_OUTPUT_DIRECTORY
+                    "${CMAKE_BINARY_DIR}/bin/tests"
         )
     endforeach()
 endif()
+
+## Installation -------------------------------------------------------------------------
+include(GNUInstallDirs)
+
+install(
+    TARGETS
+        lcqpow-static
+    EXPORT lcqpowTargets
+    LIBRARY
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME
+        DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/lcqpow FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
+
+install(
+    EXPORT lcqpowTargets
+    FILE lcqpowTargets.cmake
+    NAMESPACE lcqpow::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/lcqpow
+)
+
+# uninstall target
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
+    IMMEDIATE
+    @ONLY
+)
+
+if(NOT TARGET uninstall)
+    add_custom_target(uninstall)
+endif()
+add_custom_target(
+    ${PROJECT_NAME}-uninstall
+    COMMAND
+        ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake
+    COMMENT "Uninstalling ${PROJECT_NAME}"
+)
+add_dependencies(uninstall ${PROJECT_NAME}-uninstall)

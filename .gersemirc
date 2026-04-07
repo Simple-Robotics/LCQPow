@@ -1,0 +1,5 @@
+definitions: [./CMakeLists.txt, ./interfaces/python]
+line_length: 120
+indent: 4
+list_expansion: favour-expansion
+warn_about_unknown_commands: false

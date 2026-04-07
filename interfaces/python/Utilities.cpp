@@ -8,7 +8,7 @@ namespace python {
 
 namespace py = pybind11;
 
-PYBIND11_MODULE(Utilities, m) {
+void exposeUtilities(py::module_ m) {
   py::enum_<ReturnValue>(m, "ReturnValue", py::arithmetic())
     // Special values
     .value("NOT_YET_IMPLEMENTED",  ReturnValue::NOT_YET_IMPLEMENTED)
@@ -21,7 +21,7 @@ PYBIND11_MODULE(Utilities, m) {
     .value("INVALID_MAX_ITERATIONS_VALUE",  ReturnValue::INVALID_MAX_ITERATIONS_VALUE)
     .value("INVALID_STATIONARITY_TOLERANCE",  ReturnValue::INVALID_STATIONARITY_TOLERANCE)
     .value("INVALID_NUMBER_OF_OPTIM_VARS",  ReturnValue::INVALID_NUMBER_OF_OPTIM_VARS)
-    .value("INVALID_NUMBER_OF_COMP_VARS ",  ReturnValue::INVALID_NUMBER_OF_COMP_VARS)
+    .value("INVALID_NUMBER_OF_COMP_VARS",  ReturnValue::INVALID_NUMBER_OF_COMP_VARS)
     .value("INVALID_NUMBER_OF_CONSTRAINT_VARS",  ReturnValue::INVALID_NUMBER_OF_CONSTRAINT_VARS)
     .value("INVALID_QPSOLVER",  ReturnValue::INVALID_QPSOLVER)
     .value("INVALID_OSQP_BOX_CONSTRAINTS",  ReturnValue::INVALID_OSQP_BOX_CONSTRAINTS)
@@ -49,11 +49,11 @@ PYBIND11_MODULE(Utilities, m) {
     .value("OSQP_WORKSPACE_NOT_SET_UP",  ReturnValue::OSQP_WORKSPACE_NOT_SET_UP)
     // Generic errors
     .value("LCQPOBJECT_NOT_SETUP",  ReturnValue::LCQPOBJECT_NOT_SETUP)
-    .value("INDEX_OUT_OF_BOUNDS ",  ReturnValue::INDEX_OUT_OF_BOUNDS)
-    .value("UNABLE_TO_READ_FILE ",  ReturnValue::UNABLE_TO_READ_FILE)
+    .value("INDEX_OUT_OF_BOUNDS",  ReturnValue::INDEX_OUT_OF_BOUNDS)
+    .value("UNABLE_TO_READ_FILE",  ReturnValue::UNABLE_TO_READ_FILE)
     // Sparse matrices
-    .value("INVALID_INDEX_POINTER ",  ReturnValue::INVALID_INDEX_POINTER)
-    .value("INVALID_INDEX_ARRAY ",  ReturnValue::INVALID_INDEX_ARRAY)
+    .value("INVALID_INDEX_POINTER",  ReturnValue::INVALID_INDEX_POINTER)
+    .value("INVALID_INDEX_ARRAY",  ReturnValue::INVALID_INDEX_ARRAY)
     .export_values();
 
   py::enum_<AlgorithmStatus>(m, "AlgorithmStatus", py::arithmetic())
