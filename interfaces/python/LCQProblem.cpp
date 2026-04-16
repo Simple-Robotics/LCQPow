@@ -19,8 +19,10 @@ namespace python {
 namespace py = pybind11;
 using namespace py::literals;
 
-using ConstVectorRef = Eigen::Ref<const Eigen::VectorXd>;
-using ConstMatrixRef = Eigen::Ref<const Eigen::MatrixXd>;
+using Eigen::MatrixXd;
+using Eigen::VectorXd;
+using ConstMatrixRef = Eigen::Ref<const MatrixXd>;
+using ConstVectorRef = Eigen::Ref<const VectorXd>;
 
 
 /// @brief Wrapper for the OSQP csc struct.
@@ -107,12 +109,12 @@ void exposeLCQProblem(py::module_ m) {
                                  getRawPtrFromEigen(x0),
                                  getRawPtrFromEigen(y0));
           },
-          py::arg("Q"), py::arg("g"), py::arg("L"), py::arg("R"), 
+          "Q"_a, "g"_a, "L"_a, "R"_a, 
           "lbL"_a=Eigen::VectorXd::Zero(0), 
           "ubL"_a=Eigen::VectorXd::Zero(0), 
           "lbR"_a=Eigen::VectorXd::Zero(0), 
           "ubR"_a=Eigen::VectorXd::Zero(0), 
-          "A"_a=Eigen::MatrixXd::Zero(0, 0), 
+          "A"_a=MatrixXd::Zero(0, 0), 
           "lbA"_a=Eigen::VectorXd::Zero(0), 
           "ubA"_a=Eigen::VectorXd::Zero(0), 
           "lb"_a=Eigen::VectorXd::Zero(0), 
